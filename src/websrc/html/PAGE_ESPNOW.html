@@ -1,0 +1,83 @@
+<div id="main">
+  <nav class="navbar navbar-expand-lg bg-dark navbar-dark">
+    <div class="container">
+      <a class="navbar-brand" href="/">
+        <i class="fas fa-network-wired me-2"></i>ESP-NOW Dashboard
+      </a>
+      <div class="ms-auto">
+        <a class="btn btn-primary" href="/add_node">
+          <i class="fas fa-plus me-2"></i>เพิ่มโหนดใหม่
+        </a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container py-4">
+    <div class="row" id="cardsContainer"></div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+  <script>
+    function sendCommand(mac, cmd) {
+      fetch(`/send_command?mac=${encodeURIComponent(mac)}&cmd=${encodeURIComponent(cmd)}`)
+        .then(r => {
+          if (r.ok) {
+            alert(`✅ คำสั่ง "${cmd}" ถูกส่งแล้ว`);
+          } else {
+            alert("❌ ส่งคำสั่งไม่สำเร็จ");
+          }
+        });
+    }
+
+    function deleteNode(mac, id) {
+      if (!confirm("แน่ใจว่าจะลบ Node นี้?")) return;
+      fetch(`/delete_node?mac=${encodeURIComponent(mac)}`)
+        .then(res => {
+          if (res.ok) {
+            const el = document.getElementById("card-" + id);
+            if (el) el.remove();
+            alert("🗑 ลบ Node สำเร็จ");
+          } else {
+            alert("❌ ลบ Node ไม่สำเร็จ");
+          }
+        });
+    }
+
+    if (window.EventSource) {
+      const source = new EventSource('/events');
+      source.addEventListener('new_readings', function (e) {
+        const obj = JSON.parse(e.data);
+        const container = document.getElementById("cardsContainer");
+        const cardId = "card-" + obj.id;
+        let card = document.getElementById(cardId);
+
+        if (!card) {
+          card = document.createElement("div");
+          card.className = "col-md-4 mb-3";
+          card.id = cardId;
+          card.innerHTML = `
+            <div class="card h-100">
+              <div class="card-body"></div>
+            </div>`;
+          container.appendChild(card);
+        }
+
+        const body = card.querySelector(".card-body");
+        let html = `<h5 class="card-title">Node #${obj.id}</h5>`;
+        html += `<p class="card-text">MAC: ${obj.mac}</p>`;
+
+        for (const key in obj) {
+          if (["id", "mac", "type"].includes(key)) continue;
+          html += `<p class="card-text"><b>${key}</b>: ${obj[key]}</p>`;
+        }
+
+        if (obj.type === "switch") {
+          html += `<button class="btn btn-sm btn-warning me-1" onclick="sendCommand('${obj.mac}', 'toggle')">💡 Toggle</button>`;
+        }
+
+        html += `<button class="btn btn-sm btn-danger" onclick="deleteNode('${obj.mac}', ${obj.id})">🗑 ลบ Node</button>`;
+        body.innerHTML = html;
+      });
+    }
+  </script>
+</div>
