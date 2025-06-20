@@ -1,0 +1,18 @@
+<div id="main">
+  <div class="container mt-3">
+    <form method="POST" action="/add_node">
+      <div class="mb-3">
+        <label for="mac" class="form-label">MAC Address</label>
+        <input class="form-control" id="mac" name="mac" placeholder="AA:BB:CC:DD:EE:FF">
+      </div>
+      <div class="mb-3">
+        <label for="type" class="form-label">Type</label>
+        <select id="type" name="type" class="form-select">
+          <option value="switch">Switch</option>
+          <option value="sensor">Sensor</option>
+        </select>
+      </div>
+      <button type="submit" class="btn btn-primary">Add Node</button>
+    </form>
+  </div>
+</div>

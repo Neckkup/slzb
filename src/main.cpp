@@ -84,7 +84,7 @@ void startServers(bool usb = false){
 
 void handletmrNetworkOverseer(){
   switch (ConfigSettings.coordinator_mode){
-  case COORDINATOR_MODE_WIFI:
+  case COORDINATOR_MODE_ESPNOW:
     DEBUG_PRINTLN(F("WiFi.status()"));
     DEBUG_PRINTLN(WiFi.status());
     if(WiFi.isConnected()){
@@ -517,7 +517,7 @@ bool loadConfigSerial(){
 void startAP(const bool start){
   if (ConfigSettings.apStarted){
     if (!start){
-      if(ConfigSettings.coordinator_mode != COORDINATOR_MODE_WIFI){
+      if(ConfigSettings.coordinator_mode != COORDINATOR_MODE_ESPNOW){
         WiFi.softAPdisconnect(true);//off wifi
       }else{
         WiFi.mode(WIFI_STA);
@@ -730,8 +730,8 @@ void setupCoordinatorMode(){
       digitalWrite(MODE_SWITCH, 1);
     break;
 
-    case COORDINATOR_MODE_WIFI:
-      DEBUG_PRINTLN(F("Coordinator WIFI mode"));
+    case COORDINATOR_MODE_ESPNOW:
+      DEBUG_PRINTLN(F("Coordinator ESPNOW mode"));
       connectWifi();
     break;
 

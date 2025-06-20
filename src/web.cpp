@@ -15,6 +15,7 @@
 #include "webh/PAGE_ETHERNET.html.gz.h"
 #include "webh/PAGE_GENERAL.html.gz.h"
 #include "webh/PAGE_ESPNOW.html.gz.h"
+#include "webh/PAGE_ADD_NODE.html.gz.h"
 #include "webh/PAGE_LOADER.html.gz.h"
 #include "webh/PAGE_ROOT.html.gz.h"
 #include "webh/PAGE_SECURITY.html.gz.h"
@@ -57,7 +58,8 @@ enum API_PAGE_t : uint8_t { API_PAGE_ROOT,
                                 API_PAGE_SECURITY,
                                 API_PAGE_SYSTOOLS,
                                 API_PAGE_ABOUT ,
-                                API_PAGE_ESPNOW };
+                                API_PAGE_ESPNOW,
+                                API_PAGE_ADD_NODE };
 
 WebServer serverWeb(80);
 
@@ -85,6 +87,11 @@ void initWebServer() {
     serverWeb.on("/zha-z2m", []() { sendGzip(contTypeTextHtml, PAGE_LOADER_html_gz, PAGE_LOADER_html_gz_len); });
     serverWeb.on("/about", []() { sendGzip(contTypeTextHtml, PAGE_LOADER_html_gz, PAGE_LOADER_html_gz_len); });
     serverWeb.on("/espnow", []() { sendGzip(contTypeTextHtml, PAGE_LOADER_html_gz, PAGE_LOADER_html_gz_len); });
+    serverWeb.on("/add_node", []() { sendGzip(contTypeTextHtml, PAGE_LOADER_html_gz, PAGE_LOADER_html_gz_len); });
+    serverWeb.on("/add_node", HTTP_POST, handleAddNode);
+    serverWeb.on("/delete_node", handleDeleteNode);
+    serverWeb.on("/send_command", handleSendCommand);
+    serverWeb.on("/events", handleEvents);
     serverWeb.on("/sys-tools", []() { sendGzip(contTypeTextHtml, PAGE_LOADER_html_gz, PAGE_LOADER_html_gz_len); });
     serverWeb.on("/saveParams", HTTP_POST, handleSaveParams);
     serverWeb.on("/cmdZigRST", handleZigbeeRestart);
@@ -398,6 +405,9 @@ void handleApi() {  // http://192.168.0.116/api?action=0&page=0
                         //handleAbout();
                         sendGzip(contTypeTextHtml, PAGE_ESPNOW_html_gz, PAGE_ESPNOW_html_gz_len);
                         break;
+                    case API_PAGE_ADD_NODE:
+                        sendGzip(contTypeTextHtml, PAGE_ADD_NODE_html_gz, PAGE_ADD_NODE_html_gz_len);
+                        break;
 
                     default:
                         break;
@@ -632,8 +642,8 @@ void handleGeneral() {
             case COORDINATOR_MODE_USB:
                 doc["checkedUsbMode"] = checked;
                 break;
-            case COORDINATOR_MODE_WIFI:
-                doc["checkedWifiMode"] = checked;
+            case COORDINATOR_MODE_ESPNOW:
+                doc["checkedEspnowMode"] = checked;
                 break;
             case COORDINATOR_MODE_LAN:
                 doc["checkedLanMode"] = checked;
@@ -775,8 +785,8 @@ void handleRoot() {
             case COORDINATOR_MODE_USB:
                 doc[operationalMode] = "Zigbee-to-USB";
                 break;
-            case COORDINATOR_MODE_WIFI:
-                doc[operationalMode] = "Zigbee-to-WiFi";
+            case COORDINATOR_MODE_ESPNOW:
+                doc[operationalMode] = "Zigbee-to-ESPNOW";
                 break;
             case COORDINATOR_MODE_LAN:
                 doc[operationalMode] = "Zigbee-to-Ethernet";
@@ -855,7 +865,7 @@ void handleRoot() {
         const char* wifiModeAP = "wifiModeAP";
         const char* wifiDhcp = "wifiDhcp";
         doc["wifiMac"] = String(WiFi.macAddress().c_str());
-        if (ConfigSettings.coordinator_mode == COORDINATOR_MODE_WIFI) {
+        if (ConfigSettings.coordinator_mode == COORDINATOR_MODE_ESPNOW) {
             doc[wifiEnabled] = yes;
             doc[wifiMode] = "Client";
             if (WiFi.status() == WL_CONNECTED) {  // STA connected
@@ -951,6 +961,58 @@ void handleSavefile() {
             serverWeb.sendHeader(F("Location"), F("/sys-tools"));
             serverWeb.send(303);
         }
+    }
+}
+
+struct NodeInfo {
+    uint8_t id;
+    String mac;
+    String type;
+};
+std::vector<NodeInfo> nodes;
+
+void handleAddNode() {
+    if (serverWeb.method() == HTTP_POST && serverWeb.hasArg("mac")) {
+        NodeInfo n;
+        n.id = nodes.size() + 1;
+        n.mac = serverWeb.arg("mac");
+        n.type = serverWeb.arg("type");
+        nodes.push_back(n);
+        serverWeb.sendHeader("Location", "/espnow");
+        serverWeb.send(302, contTypeText, "");
+    } else {
+        serverWeb.send(400, contTypeText, F("Bad request"));
+    }
+}
+
+void handleDeleteNode() {
+    if (serverWeb.hasArg("mac")) {
+        String mac = serverWeb.arg("mac");
+        nodes.erase(std::remove_if(nodes.begin(), nodes.end(), [&](const NodeInfo &n){ return n.mac == mac; }), nodes.end());
+        serverWeb.send(200, contTypeText, "OK");
+    } else {
+        serverWeb.send(400, contTypeText, F("Bad request"));
+    }
+}
+
+void handleSendCommand() {
+    serverWeb.send(200, contTypeText, "OK");
+}
+
+void handleEvents() {
+    WiFiClient client = serverWeb.client();
+    serverWeb.setContentLength(CONTENT_LENGTH_UNKNOWN);
+    serverWeb.sendHeader(F("Content-Type"), F("text/event-stream"));
+    serverWeb.sendHeader(F("Cache-Control"), F("no-cache"));
+    serverWeb.send(HTTP_CODE_OK);
+    for (const auto &n : nodes) {
+        DynamicJsonDocument doc(256);
+        doc["id"] = n.id;
+        doc["mac"] = n.mac;
+        doc["type"] = n.type;
+        String json;
+        serializeJson(doc, json);
+        client.printf("event: new_readings\ndata: %s\n\n", json.c_str());
     }
 }
 
