@@ -18,5 +18,9 @@ void printLogMsg(String msg);
 void handleSaveParams();
 bool checkAuth();
 void handleZigbeeBSL();
+void handleAddNode();
+void handleDeleteNode();
+void handleSendCommand();
+void handleEvents();
 
 #define UPD_FILE "https://github.com/smlight-dev/SLZB-06/releases/latest/download/SLZB-06.bin"

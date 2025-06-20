@@ -18,7 +18,8 @@ const pages = {
 	API_PAGE_SECURITY: {num: 5, str: "/security", title: "Security"},
 	API_PAGE_SYSTOOLS: {num: 6, str: "/sys-tools", title: "System and Tools"},
 	API_PAGE_ABOUT: {num: 7, str: "/about", title: "About"},
-	API_PAGE_ESPNOW: {num: 8, str: "/espnow", title: "ESP-NOW"},
+        API_PAGE_ESPNOW: {num: 8, str: "/espnow", title: "ESP-NOW"},
+        API_PAGE_ADDNODE: {num: 9, str: "/add_node", title: "Add Node"},
 }
 
 const api = {
@@ -269,9 +270,12 @@ function loadPage(url) {
 			apiGetPage(api.pages.API_PAGE_ABOUT);
 		break;
 		
-		case api.pages.API_PAGE_ESPNOW.str:
-			apiGetPage(api.pages.API_PAGE_ESPNOW);
-		break;
+                case api.pages.API_PAGE_ESPNOW.str:
+                        apiGetPage(api.pages.API_PAGE_ESPNOW);
+                break;
+                case api.pages.API_PAGE_ADDNODE.str:
+                        apiGetPage(api.pages.API_PAGE_ADDNODE);
+                break;
 		
 		default:
 			apiGetPage(api.pages.API_PAGE_ROOT);
